@@ -44,9 +44,12 @@ jobs:
             - name: Run dotnet build webapi
               if: github.ref_name != 'main'
               run: dotnet build ./src/WebApi/webapi.csproj -p:Version=${{ steps.gitversion.outputs.fullSemVer }} -c Release
-            - name: Run dotnet test webapi
+            - name: Run dotnet test Postgresql testcontainer
               if: github.ref_name != 'main'
-              run: dotnet test ./tests/WebApi.DbTests
+              run: dotnet test ./tests/PostgreSQL.Tests
+            - name: Run dotnet test MsSQL testcontainer
+              if: github.ref_name != 'main'
+              run: dotnet test ./tests/MsSQL.Tests
             - name: Run dotnet publish webapi
               if: github.ref_name == 'main'
               run: dotnet publish ./src/WebApi/webapi.csproj /p:PublishProfile=DefaultContainer -p:Version=${{ steps.gitversion.outputs.fullSemVer }} -p:ContainerImageTags=${{ steps.gitversion.outputs.fullSemVer }} -p:ContainerRegistry=${{ secrets.ACR_LOGIN_SERVER }} -c Release
