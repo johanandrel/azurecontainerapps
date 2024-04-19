@@ -1,0 +1,52 @@
+name: build and push image to ACR
+run-name: ${{ github.actor }} is attempting to push webapi images to ACR
+
+on:
+    workflow_dispatch:
+    push:
+      branches:
+        - main
+    pull_request:
+
+permissions:
+    id-token: write
+    contents: read
+              
+jobs:
+    build-and-push:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+              with:
+                fetch-depth: 0
+            - name: Install GitVersion
+              uses: gittools/actions/gitversion/setup@v0
+              with:
+                versionSpec: '5.x'
+            - name: Determine Version
+              id: gitversion
+              uses: gittools/actions/gitversion/execute@v0
+              with:
+                  additionalArguments: /overrideconfig mode=Mainline
+            - name: Set up dotnet
+              uses: actions/setup-dotnet@v3
+              with:
+                  global-json-file: global.json
+            - name: Login to Azure
+              uses: azure/login@v1
+              with:
+                client-id: ${{ secrets.AZURE_CLIENT_ID }}
+                tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+                subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+            - name: Login to Azure Container Registry
+              run: az acr login --name ${{ secrets.ACR_LOGIN_SERVER }}
+            - name: Run dotnet build webapi
+              if: github.ref_name != 'main'
+              run: dotnet build ./src/WebApi/webapi.csproj -p:Version=${{ steps.gitversion.outputs.fullSemVer }} -c Release
+            - name: Run dotnet test webapi
+              if: github.ref_name != 'main'
+              run: dotnet test ./tests/WebApi.DbTests
+            - name: Run dotnet publish webapi
+              if: github.ref_name == 'main'
+              run: dotnet publish ./src/WebApi/webapi.csproj /p:PublishProfile=DefaultContainer -p:Version=${{ steps.gitversion.outputs.fullSemVer }} -p:ContainerImageTags=${{ steps.gitversion.outputs.fullSemVer }} -p:ContainerRegistry=${{ secrets.ACR_LOGIN_SERVER }} -c Release

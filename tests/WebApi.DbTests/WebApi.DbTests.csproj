@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="JetBrains.Annotations" VersionOverride="2023.3.0" PrivateAssets="All" Version="2023.3.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+        <PackageReference Include="Testcontainers.PostgreSql" Version="3.8.0" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.5.8">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="xunit" Version="2.7.1" />
+        <PackageReference Include="Npgsql" Version="8.0.2" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="migrate/*.sql" CopyToOutputDirectory="PreserveNewest"/>
+    </ItemGroup>
+</Project>
