@@ -22,7 +22,29 @@ When the resources are provisioned you can visit the repository in GitHub -> Set
 
 Add the following secrets under "Repository secrets". The values can be found in the Terraform output or you can find them in the Azure portal.
 
-`AZURE_SUBSCRIPTION_ID`
-`AZURE_TENANT_ID`
-`AZURE_CLIENT_ID`
-`ACR_LOGIN_SERVER`
+- `AZURE_SUBSCRIPTION_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_CLIENT_ID`
+- `ACR_LOGIN_SERVER`
+
+## Controlling Continer Apps via AZ CLI
+
+The example Terraform code show how to create a Container App with everything controlled by Terraform. 
+You can also control and update the Container Apps via the `az containerapp` CLI commands such as:
+
+### Update the Container App with a new version of an container image
+`az containerapp update -n dev-api -g container_apps_poc --image acrdev.azurecr.io/azurecontainerapps:0.1.15`
+
+### Check current ingress
+`az containerapp ingress traffic show -n dev-api -g container_apps_poc`
+
+If you run the Container App with `revision_mode = multiple` you can split traffic between two revisions (A/B-testing) or direct traffic to an older revision for example
+
+### Direct all traffic to a specific revision
+`az containerapp ingress traffic set -n dev-api -g container_apps_poc --revision-weight dev-api--yiutlih=100`
+
+### Split traffic between a revision and the latest revision (50/50)
+`az containerapp ingress traffic set -n dev-api -g container_apps_poc --revision-weight dev-api--yiutlih=50 latest=50`
+
+### Send all traffic to the latest revision again
+`az containerapp ingress traffic set -n dev-api-4 -g container_apps_poc --revision-weight latest=100`

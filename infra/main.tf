@@ -99,7 +99,7 @@ resource "azurerm_container_app" "api_1_external" {
   template {
     container {
       name   = "web-api"
-      image  = var.containerapps_image_path # will typically be <acr login server>/<repository>:<tag> (example acrprodrt.azurecr.io/azurecontainerapps:0.1.1)
+      image  = var.containerapps_image_path # will typically be <acr login server>/<repository>:<tag> (example acrdev.azurecr.io/azurecontainerapps:0.1.1)
       cpu    = 0.25
       memory = "0.5Gi"
 
