@@ -14,7 +14,12 @@
 *.suo
 *.user
 *.userosscache
-*.sln.docstates
+*.sln.
+
+# Terraform user defined variables, lock file and providers
+*.tfvars
+*.terraform*
+terraform.tfstate*
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
