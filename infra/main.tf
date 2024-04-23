@@ -68,60 +68,23 @@ resource "azurerm_role_assignment" "acrpull" {
 data "azurerm_client_config" "current" {
 }
 
-#########################
-### Azure Container Apps
-########################
+################################################################
+### Azure Container Apps (default Consumption-based environment)
+################################################################
 
-resource "azurerm_virtual_network" "prod_vnet" {
-  name                = var.containerapps_vnet_name
-  address_space       = ["10.0.0.0/20"]
-  location            = azurerm_resource_group.container_apps_poc.location
-  resource_group_name = azurerm_resource_group.container_apps_poc.name
+# Standard environment 
+resource "azurerm_container_app_environment" "container_app_environment" {
+  name                    = var.containerapps_environment_name
+  location                = azurerm_resource_group.container_apps_poc.location
+  resource_group_name     = azurerm_resource_group.container_apps_poc.name
 }
 
-# Subnet 1, must be exclusive to the Container Apps environment as this will be delegated to Microsoft
-resource "azurerm_subnet" "prod_subnet_1" {
-  name                 = var.containerapps_subnet_delegated_name
-  resource_group_name  = azurerm_resource_group.container_apps_poc.name
-  virtual_network_name = azurerm_virtual_network.prod_vnet.name
-  address_prefixes     = ["10.0.0.0/25"]
-  delegation {
-    name = "delegation"
-
-    service_delegation {
-      name    = "Microsoft.App/environments"
-      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    }
-  }
-}
-
-# Subnet 2, can be used for connectivity to other services
-resource "azurerm_subnet" "prod_subnet_2" {
-  name                 = var.containerapps_subnet_connectivity_name
-  resource_group_name  = azurerm_resource_group.container_apps_poc.name
-  virtual_network_name = azurerm_virtual_network.prod_vnet.name
-  address_prefixes     = ["10.0.2.0/26"]
-}
-
-resource "azurerm_container_app_environment" "container_app_environment_prod" {
-  name                = var.containerapps_environment_name
-  location            = azurerm_resource_group.container_apps_poc.location
-  resource_group_name = azurerm_resource_group.container_apps_poc.name
-  workload_profile {
-    name                  = var.containerapps_environment_workload_name
-    workload_profile_type = "D4" # Smallest dedicated workload profile
-    maximum_count         = 8
-    minimum_count         = 3
-  }
-  zone_redundancy_enabled  = true
-  infrastructure_subnet_id = azurerm_subnet.prod_subnet_1.id
-}
-
-resource "azurerm_container_app" "api_1_external_prod" {
-  name                         = "prod-api-1"
-  container_app_environment_id = azurerm_container_app_environment.container_app_environment_prod.id
+# Container app with a external (public) ingress that will be exposed on the internet
+resource "azurerm_container_app" "api_1_external" {
+  name                         = "dev-api-1"
+  container_app_environment_id = azurerm_container_app_environment.container_app_environment.id
   resource_group_name          = azurerm_resource_group.container_apps_poc.name
-  revision_mode                = "Single"
+  revision_mode                = "Single" # Set multiple to run multpipe revisions at the same time, traffic splitting etc. 
 
   identity {
     type         = "SystemAssigned, UserAssigned"
@@ -148,8 +111,6 @@ resource "azurerm_container_app" "api_1_external_prod" {
     }
   }
 
-  workload_profile_name = var.containerapps_environment_workload_name # Default value set by Azure if omitted is Consumption
-
   ingress {
     target_port = 8080
     traffic_weight {
@@ -159,3 +120,97 @@ resource "azurerm_container_app" "api_1_external_prod" {
     external_enabled = true
   }
 }
+
+###########################################################################
+### Azure Container Apps (Dedicated Workload profile environment with VNET)
+###########################################################################
+
+# resource "azurerm_virtual_network" "prod_vnet" {
+#   name                = var.containerapps_vnet_name
+#   address_space       = ["10.0.0.0/20"]
+#   location            = azurerm_resource_group.container_apps_poc.location
+#   resource_group_name = azurerm_resource_group.container_apps_poc.name
+# }
+
+# # Subnet 1, must be exclusive to the Container Apps environment as this will be delegated to Microsoft
+# resource "azurerm_subnet" "prod_subnet_1" {
+#   name                 = var.containerapps_subnet_delegated_name
+#   resource_group_name  = azurerm_resource_group.container_apps_poc.name
+#   virtual_network_name = azurerm_virtual_network.prod_vnet.name
+#   address_prefixes     = ["10.0.0.0/25"]
+#   delegation {
+#     name = "delegation"
+
+#     service_delegation {
+#       name    = "Microsoft.App/environments"
+#       actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+#     }
+#   }
+# }
+
+# # Subnet 2, can be used for connectivity to other services
+# resource "azurerm_subnet" "prod_subnet_2" {
+#   name                 = var.containerapps_subnet_connectivity_name
+#   resource_group_name  = azurerm_resource_group.container_apps_poc.name
+#   virtual_network_name = azurerm_virtual_network.prod_vnet.name
+#   address_prefixes     = ["10.0.2.0/26"]
+# }
+
+# # Creates a workload profile environment that reserves dedicated resources, but can also run Consumption apps in the same environment
+# # Note that this environment type can take up to 15 minutes to provision
+# resource "azurerm_container_app_environment" "container_app_environment_prod" {
+#   name                = var.containerapps_environment_name
+#   location            = azurerm_resource_group.container_apps_poc.location
+#   resource_group_name = azurerm_resource_group.container_apps_poc.name
+#   workload_profile {
+#     name                  = var.containerapps_environment_workload_name
+#     workload_profile_type = "D4" # Smallest dedicated workload profile
+#     maximum_count         = 8
+#     minimum_count         = 3
+#   }
+#   zone_redundancy_enabled  = true
+#   infrastructure_subnet_id = azurerm_subnet.prod_subnet_1.id
+# }
+
+# resource "azurerm_container_app" "api_1_external_prod" {
+#   name                         = "prod-api-1"
+#   container_app_environment_id = azurerm_container_app_environment.container_app_environment_prod.id
+#   resource_group_name          = azurerm_resource_group.container_apps_poc.name
+#   revision_mode                = "Single"
+
+#   identity {
+#     type         = "SystemAssigned, UserAssigned"
+#     identity_ids = [azurerm_user_assigned_identity.container_apps_identity.id]
+#   }
+
+#   registry {
+#     server   = azurerm_container_registry.acr.login_server
+#     identity = azurerm_user_assigned_identity.container_apps_identity.id
+#   }
+
+#   template {
+#     container {
+#       name   = "web-api"
+#       image  = var.containerapps_image_path # will typically be <acr login server>/<repository>:<tag> (example acrprodrt.azurecr.io/azurecontainerapps:0.1.1)
+#       cpu    = 0.25
+#       memory = "0.5Gi"
+
+#       startup_probe {
+#         path      = "/startup" #Custom startup probe that will check /startup
+#         port      = 8080
+#         transport = "HTTP"
+#       }
+#     }
+#   }
+
+#   workload_profile_name = var.containerapps_environment_workload_name # Default value set by Azure if omitted is Consumption
+
+#   ingress {
+#     target_port = 8080
+#     traffic_weight {
+#       percentage      = 100
+#       latest_revision = true
+#     }
+#     external_enabled = true
+#   }
+# }
