@@ -74,9 +74,9 @@ data "azurerm_client_config" "current" {
 
 # Standard environment 
 resource "azurerm_container_app_environment" "container_app_environment" {
-  name                    = var.containerapps_environment_name
-  location                = azurerm_resource_group.container_apps_poc.location
-  resource_group_name     = azurerm_resource_group.container_apps_poc.name
+  name                = var.containerapps_environment_name
+  location            = azurerm_resource_group.container_apps_poc.location
+  resource_group_name = azurerm_resource_group.container_apps_poc.name
 }
 
 # Container app with a external (public) ingress that will be exposed on the internet
@@ -120,6 +120,69 @@ resource "azurerm_container_app" "api_1_external" {
     external_enabled = true
   }
 }
+
+###########################################################################
+### Azure Container Apps (Dedicated Workload profile environment with VNET)
+###########################################################################
+
+resource "azurerm_virtual_network" "prod_vnet" {
+  name                = var.containerapps_vnet_name
+  address_space       = ["10.0.0.0/20"]
+  location            = azurerm_resource_group.container_apps_poc.location
+  resource_group_name = azurerm_resource_group.container_apps_poc.name
+}
+
+# Subnet 1, must be exclusive to the Container Apps environment as this will be delegated to Microsoft
+resource "azurerm_subnet" "prod_subnet_1" {
+  name                 = var.containerapps_subnet_delegated_name
+  resource_group_name  = azurerm_resource_group.container_apps_poc.name
+  virtual_network_name = azurerm_virtual_network.prod_vnet.name
+  address_prefixes     = ["10.0.0.0/25"]
+  delegation {
+    name = "delegation"
+
+    service_delegation {
+      name    = "Microsoft.App/environments"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+    }
+  }
+}
+
+# Subnet 2, can be used for connectivity to other services
+resource "azurerm_subnet" "prod_subnet_2" {
+  name                 = var.containerapps_subnet_connectivity_name
+  resource_group_name  = azurerm_resource_group.container_apps_poc.name
+  virtual_network_name = azurerm_virtual_network.prod_vnet.name
+  address_prefixes     = ["10.0.2.0/26"]
+}
+
+# Creates a workload profile environment that reserves dedicated resources, but can also run Consumption apps in the same environment
+# Note that this environment type can take up to 15 minutes to provision
+resource "azurerm_container_app_environment" "container_app_environment_prod" {
+  name                = var.containerapps_environment_workload_name
+  location            = azurerm_resource_group.container_apps_poc.location
+  resource_group_name = azurerm_resource_group.container_apps_poc.name
+  
+  # workload_profile {
+  #   name                  = var.containerapps_environment_workload_name
+  #   workload_profile_type = "D4" # Smallest dedicated workload profile
+  #   maximum_count         = 8
+  #   minimum_count         = 3
+  # }
+
+  # Note that if you want to use a workload profile environment without any dedicated resources (se example over) 
+  # you have to include the workload_profile below and it can only be named as the example below (it will then replace 
+  # the default Consumption profile from Microsoft
+  workload_profile {
+    name                  = "Consumption"
+    workload_profile_type = "Consumption"
+  }
+
+  zone_redundancy_enabled        = true
+  internal_load_balancer_enabled = true
+  infrastructure_subnet_id       = azurerm_subnet.prod_subnet_1.id
+}
+
 
 ###########################################################################
 ### Azure Container Apps (Dedicated Workload profile environment with VNET)

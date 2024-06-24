@@ -56,22 +56,22 @@ variable "containerapps_image_path" {
 # THE FOLLOWING VARIABLES ARE ONLY USED IF TESTING THE WORKLOAD PROFILE ENVIRONMENT
 #
 
-# variable "containerapps_environment_workload_name" {
-#   type        = string
-#   description = "Name of the dedicated workload name in the Container App Environment. Will be used by each app should run on that workload"
-# }
+variable "containerapps_environment_workload_name" {
+  type        = string
+  description = "Name of the dedicated workload name in the Container App Environment. Will be used by each app should run on that workload"
+}
 
-# variable "containerapps_vnet_name" {
-#   type        = string
-#   description = "Name of the VNET that the Container Apps environment should use"
-# }
+variable "containerapps_vnet_name" {
+  type        = string
+  description = "Name of the VNET that the Container Apps environment should use"
+}
 
-# variable "containerapps_subnet_delegated_name" {
-#   type        = string
-#   description = "Name of the subnet that will be delegated to manage the Container Apps environment"
-# }
+variable "containerapps_subnet_delegated_name" {
+  type        = string
+  description = "Name of the subnet that will be delegated to manage the Container Apps environment"
+}
 
-# variable "containerapps_subnet_connectivity_name" {
-#   type        = string
-#   description = "Name of the subnet that can be used to connect to other services"
-# }
+variable "containerapps_subnet_connectivity_name" {
+  type        = string
+  description = "Name of the subnet that can be used to connect to other services"
+}
